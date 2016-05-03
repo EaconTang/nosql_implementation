@@ -51,7 +51,7 @@ class BinaryTree(LogicalObject):
         else:
             # key match, update value_ref
             new_node = BinaryNode.from_node(node, value_ref=value_ref)
-        return self.node_ref(refer=new_node)
+        return self.node_ref(refer_to=new_node)
 
     def _delete(self, node, key):
         assert isinstance(key, str), "Key should be type string!"
@@ -78,7 +78,7 @@ class BinaryTree(LogicalObject):
                 return node.left_ref
             elif right:
                 return node.right_ref
-        return self.node_ref(refer=new_node)
+        return self.node_ref(refer_to=new_node)
 
     def find_max(self, node):
         while True:

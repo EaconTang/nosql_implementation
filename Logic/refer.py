@@ -38,8 +38,21 @@ class ValueRef(object):
     def refer_to_string(self, refer):
         raise NotImplementedError
 
+    @property
     def address(self):
         return self._address
+
+    @address.setter
+    def address(self, _addr):
+        self._address = _addr
+
+    @property
+    def reference(self):
+        return self._refer
+
+    @reference.setter
+    def reference(self, _refer_to):
+        self._refer = _refer_to
 
 
 class StringValueRef(ValueRef):
@@ -95,3 +108,7 @@ class BinaryNodeRef(ValueRef):
             return self._refer.length
         else:
             raise ValueRefLengthError("No length for non-exist binary node!")
+
+    @length.setter
+    def length(self, _length):
+        self._refer.length = _length

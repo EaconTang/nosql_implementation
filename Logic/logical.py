@@ -105,6 +105,12 @@ class DBDB(object):
     def __len__(self):
         return len(self._tree)
 
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not self._storage.closed:
+            self.close()
 
 # def connect(dbname):
 #     try:
