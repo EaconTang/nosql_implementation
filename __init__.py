@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
-from interface import DBDB
 
+from old.interface import DBDB
 
 __all__ = ['DBDB', 'connect']
 
@@ -11,5 +11,7 @@ def connect(dbname):
         f = open(dbname, 'r+b')
     except IOError:
         fd = os.open(dbname, os.O_RDWR | os.O_CREAT)
-        f - os.fdopen(fd, 'r+b')
+        f = os.fdopen(fd, 'r+b')
     return DBDB(f)
+
+

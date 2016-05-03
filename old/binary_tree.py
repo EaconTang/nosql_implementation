@@ -4,6 +4,7 @@ concrete implementation of a binary tree
 """
 import pickle
 from logical import ValueRef, LogicalBase
+from refer import BinaryNodeRef
 
 
 class BinaryTree(LogicalBase):
@@ -69,7 +70,7 @@ class BinaryTree(LogicalBase):
             )
         else:
             left = self._follow(node.left_ref)
-            right = self.__follow(node.right_ref)
+            right = self._follow(node.right_ref)
             if left and right:
                 replacement = self._find_max(left)
                 left_ref = self._delete(self._follow(node.left_ref), replacement.key)
@@ -154,7 +155,7 @@ class BinaryNodeRef(ValueRef):
         return pickle.dumps({
             'left': referent.left_ref.address,
             'key': referent.key,
-            'value': referent.value_reg.address,
+            'value': referent.value_ref.address,
             'right': referent.right_ref.address,
             'length': referent.length,
         })

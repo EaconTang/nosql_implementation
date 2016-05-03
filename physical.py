@@ -1,109 +1,125 @@
 # -*- coding: utf-8 -*-
 """
-# This started as a very thin wrapper around a file object, with intent to
-# provide an object address on write() and a superblock. But as I was writing
-# it, I realised that the user really wouldn't want to deal with the lengths of
-# the writen chunks (and Pickle won't do it for you), so this module would have
-# to abstract the file object into it's own degenerate key/value store.
-# (Degenerate because you can't pick the keys, and it never releases storage,
-# even when it becomes unreachable!)
+physical layer
 """
-
 import os
 import struct
 import portalocker
+from exception import *
 
 
-class Storage(object):
+class PhysicalObject(object):
     """
-    provide persistent, append-only record storage
+    append-only record storage
     """
-    SUPERBLOCK_SIZE = 4096
-    INTEGER_FORMAT = "!Q"
+
+    INTEGER_FORMAT = "!Q"  # "Q": unsigned long long; "!": network byte order
     INTEGER_LENGTH = 8
+    SUPERBLOCK_SIZE = 4096
 
-    def __init__(self, f):
-        self._f = f
+    def __init__(self, file_obj=None, fd=None, file_name=None):
+        if file_obj:
+            self._f = file_obj
+        elif fd:
+            self._f = os.fdopen(fd, 'rb+')
+        elif file_name:
+            self._f = open(file_name)
+        else:
+            raise DBFileNotExistError("No database file found.")
         self.locked = False
-        self._ensure_superblock()
+        self.ensure_block()
 
-    def _ensure_superblock(self):
+    def ensure_block(self):
+        """
+        ensure each block is the size of SUPERBLOCK_SIZE
+        :return:
+        """
         self.lock()
-        self._seek_end()
-        end_address = self._f.tell()
-        if end_address < self.SUPERBLOCK_SIZE:
-            self._f.write(b'\x00' * (self.SUPERBLOCK_SIZE - end_address))
-        self.unclock()
+        self.seek_end()
+        end_position = self._f.tell()
+        if end_position < self.SUPERBLOCK_SIZE:
+            self._f.write(b'\x00' * (self.SUPERBLOCK_SIZE - end_position))
+        self.unlcok()
 
     def lock(self):
         if not self.locked:
             portalocker.lock(self._f, portalocker.LOCK_EX)
             self.locked = True
-            return True
-        else:
-            return False
 
-    def unlock(self):
+    def unlcok(self):
         if self.locked:
             self._f.flush()
             portalocker.unlock(self._f)
             self.locked = False
 
-    def _seek_end(self):
+    def seek_end(self):
         self._f.seek(0, os.SEEK_END)
 
-    def _seek_superblock(self):
+    def seek_superblock(self):
         self._f.seek(0)
 
-    def _bytes_to_integer(self, integer_bytes):
-        return struct.unpack(self.INTEGER_FORMAT, integer_bytes)[0]
+    def seek_to_pos(self, position):
+        self._f.seek(position)
 
-    def _integer_to_bytes(self, integer):
-        return struct.pack(self.INTEGER_FORMAT, integer)
+    def seek_start(self):
+        self.seek_superblock()
 
-    def _read_integer(self):
-        return self._bytes_to_integer(self._f.read(self.INTEGER_LENGTH))
+    def bytes_to_int(self, _bytes):
+        return struct.unpack(self.INTEGER_FORMAT, _bytes)[0]
 
-    def _write_integer(self, integer):
+    def int_to_bytes(self, _int):
+        return struct.pack(self.INTEGER_FORMAT, _int)
+
+    def read_int(self):
+        return self.bytes_to_int(self._f.read(self.INTEGER_LENGTH))
+
+    def write_int(self, _int):
         self.lock()
-        self._f.write(self._integer_to_bytes(integer))
+        self._f.write(self.int_to_bytes(_int))
 
     def write(self, data):
         self.lock()
-        self._seek_end()
-        object_address = self._f.tell()
-        self._write_integer(len(data))
-        self._f.write(data)
-        return object_address
+        self.seek_end()
+        current_position = self._f.tell()
+        self.write_int(len(data))  # write data length
+        self._f.write(data)  # write data
+        return current_position
 
-    def read(self, address):
-        self._f.seek(address)
-        length = self._read_integer()
-        data = self._f.read(length)
+    def read(self, position):
+        self.seek_to_pos(position)
+        length = self.read_int()  # read data length
+        data = self._f.read(length)  # read data
         return data
 
     def commit_root_address(self, root_address):
-        """
-
-        :param root_address:
-        :return:
-        """
         self.lock()
         self._f.flush()
-        self._seek_superblock()
-        self._write_integer(root_address)
+        self.seek_superblock()
+        self.write_int(root_address)
         self._f.flush()
-        self.unlock()
+        self.unlcok()
 
     def get_root_address(self):
-        self._seek_superblock()
-        root_address = self._read_integer()
+        self.seek_superblock()
+        root_address = self.read_int()
         return root_address
 
     def close(self):
-        self.unlock()
+        self.unlcok()
         self._f.close()
 
-    @property
     def closed(self):
         return self._f.closed
+
+    def __str__(self):
+        assert isinstance(self._f, file)
+        return self._f.name
+
+
+if __name__ == '__main__':
+    p = PhysicalObject(file_name='../test.db')
+    print isinstance(p.int_to_bytes(100), bytes)
+    i = p.bytes_to_int(p.int_to_bytes(100))
+    print i
+
+    p.seek_end()

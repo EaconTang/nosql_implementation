@@ -2,6 +2,8 @@
 from binary_tree import BinaryTree
 from physical import Storage
 
+import os
+
 
 class DBDB(object):
     """
@@ -46,3 +48,31 @@ class DBDB(object):
 
     def __len__(self):
         return len(self._tree)
+
+
+def connect(dbname):
+    try:
+        f = open(dbname, 'r+b')
+    except IOError:
+        fd = os.open(dbname, os.O_RDWR | os.O_CREAT)
+        f = os.fdopen(fd, 'r+b')
+    return DBDB(f)
+
+
+if __name__ == '__main__':
+    db = connect('test.db')
+    db['foo'] = 'bar'
+    db['foo1'] = 'bar1'
+    db['foo2'] = 'bar2'
+
+    for i in range(1000):
+        key = 'foo' + str(i)
+        val = 'bar' + str(i)
+        db[key] = val
+        print 'saved[key:value]: ', key, ':', val
+
+    for i in range(1000):
+        key = 'foo' + str(i)
+        print key, ':', db[key]
+
+

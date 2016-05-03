@@ -2,7 +2,7 @@
 """
 abstract interface to key/value store
 """
-
+from refer import ValueRef
 
 class LogicalBase(object):
     """
@@ -63,42 +63,3 @@ class LogicalBase(object):
         self._tree_ref.store(self._storage)
         self._storage.commit_root_address(self._tree_ref.address)
 
-
-class ValueRef(object):
-    """
-    python object that refers to a binary blob stored in database
-    """
-
-    def __init__(self, referent=None, address=0):
-        self._referent = referent
-        self._address = address
-
-    def prepare_to_store(self, storage):
-        pass
-
-    def get(self, storage):
-        if self._referent is None and self._address:
-            self._referent = self.string_to_referent(storage.read(self._address))
-        return self._referent
-
-    def store(self, storage):
-        """
-        serialise this node and save its storage address
-        :param storage:
-        :return:
-        """
-        if self._referent is not None and not self._address:
-            self.prepare_to_store(storage)
-            self._address = storage.write(self.referent_to_string(self._referent))
-
-    @staticmethod
-    def referent_to_string(referent):
-        return referent.encode('utf-8')
-
-    @staticmethod
-    def string_to_referent(string):
-        return string.decode('utf-8')
-
-    @property
-    def address(self):
-        return self._address
